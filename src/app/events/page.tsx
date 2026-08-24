@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Clock, MapPin, Loader2, ArrowLeft, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, Loader2, ArrowLeft, Plus, ChevronLeft, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
 
 type Training = { id: number; type: string; time: string; location: string; status: string };
@@ -13,6 +13,39 @@ export default function EventsPage() {
 
   // Navigation State (starts at August 2026 as per original design)
   const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1)); 
+
+  // Modal states for override
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [customTrainingType, setCustomTrainingType] = useState("");
+
+  const handleSaveCustomTraining = async () => {
+    if (!customTrainingType) return;
+    
+    try {
+      const res = await fetch('/api/trainings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: customTrainingType,
+          time: selectedDate,
+          location: "База (Кастомно)",
+          status: "Заплановано",
+          rpe: 5, rir: 2, volume: "MAV"
+        })
+      });
+      if (res.ok) {
+        setIsModalOpen(false);
+        setCustomTrainingType("");
+        // Reload trainings to reflect the new override
+        fetch('/api/trainings').then(r => r.json()).then(data => {
+          if (!data.error) setTrainings(Array.isArray(data) ? data : []);
+        });
+      }
+    } catch (err) {
+      alert("Помилка збереження");
+    }
+  };
 
   useEffect(() => {
     fetch('/api/trainings')
@@ -97,18 +130,27 @@ export default function EventsPage() {
               const today = new Date();
               const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
               
+              const absoluteDateString = `${day} ${monthName} ${year}`;
               const matchOnDay = matches.find(m => m.date.includes(`${day} ${monthName}`));
               const hasMatch = !!matchOnDay;
+              
+              // Check if user has explicitly set a training for this absolute date in the DB
+              const customTraining = trainings.find(t => t.time === absoluteDateString);
               
               // Deterministic assignment of training type based on absolute day index
               const dayTimestamp = new Date(year, month, day).getTime();
               const dayIndex = Math.floor(dayTimestamp / (1000 * 60 * 60 * 24));
-              const tType = trainingTypes[Math.abs(dayIndex) % trainingTypes.length];
+              const autoType = trainingTypes[Math.abs(dayIndex) % trainingTypes.length];
+              
               const hasTraining = !hasMatch; 
               
               return (
                 <div 
-                  key={day} 
+                  key={day}
+                  onClick={() => {
+                    setSelectedDate(absoluteDateString);
+                    setIsModalOpen(true);
+                  }}
                   className={`h-28 p-2 border rounded-xl flex flex-col transition-all hover:bg-gray-800 cursor-pointer ${
                     isToday ? 'border-[#9FE870] bg-[#9FE870]/5' : 'border-gray-800 bg-gray-950'
                   }`}
@@ -123,9 +165,14 @@ export default function EventsPage() {
                         Матч: {matchOnDay.opponent.split(' ')[1] || matchOnDay.opponent}
                       </div>
                     )}
-                    {hasTraining && (
-                      <div className={`border text-[10px] uppercase font-bold px-1.5 py-1 rounded truncate ${tType.color}`}>
-                        {tType.name}
+                    {hasTraining && customTraining && (
+                      <div className="border text-[10px] uppercase font-bold px-1.5 py-1 rounded truncate text-pink-400 bg-pink-500/20 border-pink-500/30">
+                        {customTraining.type} (Своє)
+                      </div>
+                    )}
+                    {hasTraining && !customTraining && (
+                      <div className={`border text-[10px] uppercase font-bold px-1.5 py-1 rounded truncate ${autoType.color}`}>
+                        {autoType.name}
                       </div>
                     )}
                   </div>
@@ -180,6 +227,56 @@ export default function EventsPage() {
           </div>
         </div>
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-white">Змінити подію</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white"><X size={24} /></button>
+            </div>
+            
+            <div className="space-y-4">
+              <p className="text-sm text-gray-400 mb-4">Ви встановлюєте кастомне тренування на: <strong>{selectedDate}</strong></p>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Власна назва (або оберіть зі списку)</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#9FE870] mb-3"
+                  placeholder="Наприклад, Силове тренування"
+                  value={customTrainingType}
+                  onChange={e => setCustomTrainingType(e.target.value)}
+                />
+                
+                <div className="flex flex-wrap gap-2">
+                  {trainingTypes.map(t => (
+                    <button 
+                      key={t.name}
+                      onClick={() => setCustomTrainingType(t.name)}
+                      className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${t.color}`}
+                    >
+                      {t.name}
+                    </button>
+                  ))}
+                  <button 
+                      onClick={() => setCustomTrainingType("Теорія")}
+                      className="text-xs px-3 py-1.5 rounded-lg border text-pink-400 bg-pink-500/20 border-pink-500/30 transition-colors"
+                    >
+                      Теорія
+                  </button>
+                </div>
+              </div>
+              
+              <button 
+                onClick={handleSaveCustomTraining}
+                className="w-full bg-[#9FE870] text-gray-950 px-6 py-3 rounded-xl font-bold hover:bg-[#85c95a] transition-colors mt-6"
+              >
+                Зберегти в базу
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
