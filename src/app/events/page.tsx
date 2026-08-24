@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Clock, MapPin, Loader2, ArrowLeft, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, Loader2, ArrowLeft, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 type Training = { id: number; type: string; time: string; location: string; status: string };
@@ -9,16 +9,16 @@ type Training = { id: number; type: string; time: string; location: string; stat
 export default function EventsPage() {
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
   const [matches, setMatches] = useState<any[]>([]);
+
+  // Navigation State (starts at August 2026 as per original design)
+  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1)); 
 
   useEffect(() => {
     fetch('/api/trainings')
       .then(res => res.json())
       .then(data => {
-        if (!data.error) {
-          setTrainings(Array.isArray(data) ? data : []);
-        }
+        if (!data.error) setTrainings(Array.isArray(data) ? data : []);
         setIsLoading(false);
       })
       .catch(() => setIsLoading(false));
@@ -26,14 +26,30 @@ export default function EventsPage() {
     fetch('/api/matches')
       .then(res => res.json())
       .then(data => {
-        if (!data.error) {
-          setMatches(Array.isArray(data) ? data : []);
-        }
+        if (!data.error) setMatches(Array.isArray(data) ? data : []);
       });
   }, []);
 
-  const daysInMonth = 31;
-  const firstDayOffset = 3; // Example: starts on Thursday
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  
+  const monthNames = ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"];
+  const monthName = monthNames[month];
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  const firstDayOffset = firstDay === 0 ? 6 : firstDay - 1; // Mon = 0
+
+  const handlePrevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const handleNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+
+  // Deterministic training type generator for infinite scrolling
+  const trainingTypes = [
+    { name: "Ноги", color: "text-blue-400 bg-blue-500/20 border-blue-500/30" },
+    { name: "Руки / Плечі", color: "text-purple-400 bg-purple-500/20 border-purple-500/30" },
+    { name: "Спина / Кор", color: "text-indigo-400 bg-indigo-500/20 border-indigo-500/30" },
+    { name: "Відпочинок / Масаж", color: "text-green-400 bg-green-500/20 border-green-500/30" }
+  ];
 
   return (
     <div className="p-8 pb-20">
@@ -55,10 +71,15 @@ export default function EventsPage() {
         {/* Main Calendar View */}
         <div className="bg-gray-900 border border-gray-800 rounded-3xl p-6">
           <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-bold text-white">Серпень 2026</h2>
+            <div className="flex items-center gap-4">
+              <button onClick={handlePrevMonth} className="p-2 bg-gray-800 rounded-xl hover:bg-gray-700 text-white"><ChevronLeft size={20}/></button>
+              <h2 className="text-2xl font-bold text-white w-48 text-center">{monthName} {year}</h2>
+              <button onClick={handleNextMonth} className="p-2 bg-gray-800 rounded-xl hover:bg-gray-700 text-white"><ChevronRight size={20}/></button>
+            </div>
             <div className="flex gap-4 text-sm text-gray-400">
               <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-orange-500"></div> Матчі</span>
               <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div> Тренування</span>
+              <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500"></div> Відпочинок</span>
             </div>
           </div>
 
@@ -73,13 +94,17 @@ export default function EventsPage() {
             
             {[...Array(daysInMonth)].map((_, i) => {
               const day = i + 1;
-              const isToday = day === 24;
+              const today = new Date();
+              const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
               
-              // Find if any real match from DB happens on this day in August
-              const matchOnDay = matches.find(m => m.date.includes(`${day} Серпня`));
+              const matchOnDay = matches.find(m => m.date.includes(`${day} ${monthName}`));
               const hasMatch = !!matchOnDay;
               
-              const hasTraining = day % 3 === 0 && !hasMatch;
+              // Deterministic assignment of training type based on absolute day index
+              const dayTimestamp = new Date(year, month, day).getTime();
+              const dayIndex = Math.floor(dayTimestamp / (1000 * 60 * 60 * 24));
+              const tType = trainingTypes[Math.abs(dayIndex) % trainingTypes.length];
+              const hasTraining = !hasMatch; 
               
               return (
                 <div 
@@ -99,8 +124,8 @@ export default function EventsPage() {
                       </div>
                     )}
                     {hasTraining && (
-                      <div className="bg-blue-500/20 border border-blue-500/30 text-blue-400 text-[10px] uppercase font-bold px-1.5 py-1 rounded truncate">
-                        Тактика
+                      <div className={`border text-[10px] uppercase font-bold px-1.5 py-1 rounded truncate ${tType.color}`}>
+                        {tType.name}
                       </div>
                     )}
                   </div>
