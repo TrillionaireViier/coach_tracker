@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { Home, Users, Calendar, Activity, DollarSign, Settings, LogOut } from 'lucide-react';
 
 const navItems = [
-  { name: 'Dashboard', href: '/', icon: Home },
-  { name: 'Players', href: '/players', icon: Users },
-  { name: 'Trainings', href: '/trainings', icon: Calendar },
-  { name: 'Medical', href: '/medical', icon: Activity },
-  { name: 'Finances', href: '/finances', icon: DollarSign },
+  { name: 'Головна', href: '/', icon: Home },
+  { name: 'Гравці', href: '/players', icon: Users },
+  { name: 'Тренування', href: '/trainings', icon: Calendar },
+  { name: 'Медицина', href: '/medical', icon: Activity },
+  { name: 'Фінанси', href: '/finances', icon: DollarSign },
 ];
 
 export function Sidebar() {
@@ -45,7 +45,7 @@ export function Sidebar() {
           className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-colors"
         >
           <Settings size={20} />
-          <span className="font-medium">Settings</span>
+          <span className="font-medium">Налаштування</span>
         </Link>
         <button 
           onClick={handleLogout}
