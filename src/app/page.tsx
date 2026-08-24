@@ -113,7 +113,7 @@ export default function DashboardOverview() {
         <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-white">Календар (Серпень 2026)</h2>
-            <button className="text-sm text-[#9FE870] hover:underline">Всі події</button>
+            <Link href="/events" className="text-sm text-[#9FE870] hover:underline">Всі події</Link>
           </div>
           
           <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-medium text-gray-400">
