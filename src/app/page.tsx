@@ -31,9 +31,9 @@ export default function DashboardOverview() {
           <button onClick={handleLogout} className="bg-gray-800 text-white border border-gray-700 px-6 py-3 rounded-xl font-medium hover:bg-gray-700 transition-colors">
             Вийти
           </button>
-          <button className="bg-[#9FE870] text-gray-950 px-6 py-3 rounded-xl font-medium hover:bg-[#85c95a] transition-colors">
+          <Link href="/trainings" className="bg-[#9FE870] text-gray-950 px-6 py-3 rounded-xl font-medium hover:bg-[#85c95a] transition-colors">
             + Запланувати Тренування
-          </button>
+          </Link>
         </div>
       </header>
 
