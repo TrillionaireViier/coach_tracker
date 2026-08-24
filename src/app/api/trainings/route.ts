@@ -63,6 +63,33 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, type, time, location, status, rpe, rir, volume } = body;
+    
+    if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
+
+    const updatedTraining = await sql`
+      UPDATE trainings 
+      SET type = COALESCE(${type}, type),
+          time = COALESCE(${time}, time),
+          location = COALESCE(${location}, location),
+          status = COALESCE(${status}, status),
+          rpe = COALESCE(${rpe}, rpe),
+          rir = COALESCE(${rir}, rir),
+          volume = COALESCE(${volume}, volume)
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    
+    if (updatedTraining.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return NextResponse.json(updatedTraining[0]);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const body = await request.json();

@@ -22,29 +22,48 @@ export default function EventsPage() {
   const handleSaveCustomTraining = async () => {
     if (!customTrainingType) return;
     
-    // Оптимістичне збереження (Одразу відображаємо на сайті)
-    const optimisticTraining = {
-      id: Date.now(),
-      type: customTrainingType,
-      time: selectedDate,
-      location: "База (Кастомно)",
-      status: "Заплановано",
-      rpe: 5, rir: 2, volume: "MAV"
-    };
+    const existingTraining = trainings.find(t => t.time === selectedDate);
     
-    setTrainings(prev => [...prev, optimisticTraining]);
-    setIsModalOpen(false);
-    setCustomTrainingType("");
+    if (existingTraining) {
+      // Оптимістичне оновлення
+      const updatedTraining = { ...existingTraining, type: customTrainingType };
+      setTrainings(prev => prev.map(t => t.id === existingTraining.id ? updatedTraining : t));
+      setIsModalOpen(false);
+      setCustomTrainingType("");
 
-    // Спроба відправити на сервер у фоновому режимі (без помилок для користувача)
-    try {
-      await fetch('/api/trainings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(optimisticTraining)
-      });
-    } catch (err) {
-      console.error("Сервер недоступний, але збережено локально");
+      try {
+        await fetch('/api/trainings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedTraining)
+        });
+      } catch (err) {
+        console.error("Помилка оновлення", err);
+      }
+    } else {
+      // Оптимістичне створення
+      const optimisticTraining = {
+        id: Date.now(),
+        type: customTrainingType,
+        time: selectedDate,
+        location: "База (Кастомно)",
+        status: "Заплановано",
+        rpe: 5, rir: 2, volume: "MAV"
+      };
+      
+      setTrainings(prev => [...prev, optimisticTraining]);
+      setIsModalOpen(false);
+      setCustomTrainingType("");
+
+      try {
+        await fetch('/api/trainings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(optimisticTraining)
+        });
+      } catch (err) {
+        console.error("Сервер недоступний, але збережено локально");
+      }
     }
   };
 
