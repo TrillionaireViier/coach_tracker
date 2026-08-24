@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Users, CalendarCheck, Activity, TrendingUp } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
