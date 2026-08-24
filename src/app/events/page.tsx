@@ -10,6 +10,8 @@ export default function EventsPage() {
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [matches, setMatches] = useState<any[]>([]);
+
   useEffect(() => {
     fetch('/api/trainings')
       .then(res => res.json())
@@ -20,6 +22,14 @@ export default function EventsPage() {
         setIsLoading(false);
       })
       .catch(() => setIsLoading(false));
+
+    fetch('/api/matches')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) {
+          setMatches(Array.isArray(data) ? data : []);
+        }
+      });
   }, []);
 
   const daysInMonth = 31;
@@ -35,9 +45,9 @@ export default function EventsPage() {
           <h1 className="text-4xl font-bold text-white mb-2">Календар подій</h1>
           <p className="text-gray-400">Розклад усіх матчів, тренувань та командних зборів.</p>
         </div>
-        <button className="bg-[#9FE870] text-gray-950 px-6 py-3 rounded-xl font-bold hover:bg-[#85c95a] transition-colors flex items-center gap-2">
+        <Link href="/matches" className="bg-[#9FE870] text-gray-950 px-6 py-3 rounded-xl font-bold hover:bg-[#85c95a] transition-colors flex items-center gap-2">
           <Plus size={18} /> Створити подію
-        </button>
+        </Link>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
@@ -64,7 +74,11 @@ export default function EventsPage() {
             {[...Array(daysInMonth)].map((_, i) => {
               const day = i + 1;
               const isToday = day === 24;
-              const hasMatch = day === 15 || day === 28;
+              
+              // Find if any real match from DB happens on this day in August
+              const matchOnDay = matches.find(m => m.date.includes(`${day} Серпня`));
+              const hasMatch = !!matchOnDay;
+              
               const hasTraining = day % 3 === 0 && !hasMatch;
               
               return (
@@ -81,7 +95,7 @@ export default function EventsPage() {
                   <div className="flex-1 flex flex-col gap-1 overflow-hidden">
                     {hasMatch && (
                       <div className="bg-orange-500/20 border border-orange-500/30 text-orange-400 text-[10px] uppercase font-bold px-1.5 py-1 rounded truncate">
-                        Матч: Динамо
+                        Матч: {matchOnDay.opponent.split(' ')[1] || matchOnDay.opponent}
                       </div>
                     )}
                     {hasTraining && (
@@ -120,21 +134,22 @@ export default function EventsPage() {
                 ))
               )}
 
-              {/* Mock Match Event */}
-              <div className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl hover:bg-orange-500/20 transition-colors">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-orange-400 uppercase">Офіційний Матч</span>
-                  <span className="text-xs text-orange-500/50">Заплановано</span>
+              {matches.slice(0, 3).map(m => (
+                <div key={m.id} className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl hover:bg-orange-500/20 transition-colors">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-orange-400 uppercase">Офіційний Матч ({m.type})</span>
+                    <span className="text-xs text-orange-500/50">{m.status}</span>
+                  </div>
+                  <h4 className="text-white font-bold mb-2">{m.opponent}</h4>
+                  <div className="flex flex-col gap-1 text-xs text-gray-400">
+                    <span className="flex items-center gap-1.5"><Clock size={12}/> {m.date}</span>
+                    <span className="flex items-center gap-1.5"><MapPin size={12}/> {m.location}</span>
+                  </div>
                 </div>
-                <h4 className="text-white font-bold mb-2">ФК Динамо (Дома)</h4>
-                <div className="flex flex-col gap-1 text-xs text-gray-400">
-                  <span className="flex items-center gap-1.5"><Clock size={12}/> 28 Серпня, 19:00</span>
-                  <span className="flex items-center gap-1.5"><MapPin size={12}/> Олімпійський Стадіон</span>
-                </div>
-              </div>
+              ))}
             </div>
             
-            <Link href="/trainings" className="block w-full text-center py-3 mt-6 border border-gray-800 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
+            <Link href="/matches" className="block w-full text-center py-3 mt-6 border border-gray-800 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
               Перейти до таблиці бази
             </Link>
           </div>
