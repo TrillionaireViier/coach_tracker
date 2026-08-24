@@ -19,7 +19,12 @@ export default function PlayersPage() {
     fetch('/api/players')
       .then(res => res.json())
       .then(data => {
-        setPlayers(data);
+        setPlayers(Array.isArray(data) ? data : []);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setPlayers([]);
         setIsLoading(false);
       });
   };

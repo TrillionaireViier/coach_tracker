@@ -6,6 +6,18 @@ export async function GET() {
     const players = await sql`SELECT * FROM players ORDER BY id ASC`;
     return NextResponse.json(players);
   } catch (error: any) {
+    if (error.message.includes('relation "players" does not exist')) {
+      await sql`
+        CREATE TABLE players (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          position VARCHAR(100),
+          status VARCHAR(50),
+          rpe INTEGER
+        )
+      `;
+      return NextResponse.json([]);
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
