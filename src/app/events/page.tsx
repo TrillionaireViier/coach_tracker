@@ -96,13 +96,43 @@ export default function EventsPage() {
   const handlePrevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const handleNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
-  // Deterministic training type generator for infinite scrolling
   const trainingTypes = [
     { name: "Ноги", color: "text-blue-400 bg-blue-500/20 border-blue-500/30" },
     { name: "Руки / Плечі", color: "text-purple-400 bg-purple-500/20 border-purple-500/30" },
     { name: "Спина / Кор", color: "text-indigo-400 bg-indigo-500/20 border-indigo-500/30" },
     { name: "Відпочинок / Масаж", color: "text-green-400 bg-green-500/20 border-green-500/30" }
   ];
+
+  // Згенерувати стабільний список найближчих подій (починаючи від сьогодні)
+  const upcomingEvents = [];
+  const today = new Date();
+  
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const day = d.getDate();
+    const mName = monthNames[m];
+    const absoluteDateString = `${day} ${mName} ${y}`;
+    
+    const matchOnDay = matches.find(match => match.date.includes(`${day} ${mName}`));
+    if (matchOnDay) {
+      upcomingEvents.push({ type: 'match', data: matchOnDay, dateString: absoluteDateString });
+      continue;
+    }
+
+    const customTraining = trainings.find(t => t.time === absoluteDateString);
+    if (customTraining) {
+      upcomingEvents.push({ type: 'custom_training', data: customTraining, dateString: absoluteDateString });
+    } else {
+      const dayTimestamp = new Date(y, m, day).getTime();
+      const dayIndex = Math.floor(dayTimestamp / (1000 * 60 * 60 * 24));
+      const autoType = trainingTypes[Math.abs(dayIndex) % trainingTypes.length];
+      upcomingEvents.push({ type: 'auto_training', data: autoType, dateString: absoluteDateString });
+    }
+    
+    if (upcomingEvents.length >= 5) break;
+  }
 
   return (
     <div className="p-8 pb-20">
@@ -211,62 +241,73 @@ export default function EventsPage() {
               {isLoading ? (
                 <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#9FE870]" /></div>
               ) : (
-                trainings.slice(0, 5).map(t => (
-                  <div key={t.id} className="p-4 bg-gray-950 border border-gray-800 rounded-xl hover:border-gray-700 transition-colors group relative">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-blue-400 uppercase">Тренування</span>
-                      <span className="text-xs text-gray-500">{t.status}</span>
+                upcomingEvents.map((event, idx) => {
+                  if (event.type === 'match') {
+                    const m = event.data;
+                    return (
+                      <div key={`match-${m.id || idx}`} className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl hover:bg-orange-500/20 transition-colors">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-orange-400 uppercase">Офіційний Матч ({m.type})</span>
+                          <span className="text-xs text-orange-500/50">{m.status}</span>
+                        </div>
+                        <h4 className="text-white font-bold mb-2">{m.opponent}</h4>
+                        <div className="flex flex-col gap-1 text-xs text-gray-400">
+                          <span className="flex items-center gap-1.5"><Clock size={12}/> {m.date}</span>
+                          <span className="flex items-center gap-1.5"><MapPin size={12}/> {m.location}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  const isCustom = event.type === 'custom_training';
+                  const title = isCustom ? event.data.type : event.data.name;
+                  const dateStr = event.dateString;
+                  const id = isCustom ? event.data.id : `auto-${dateStr}`;
+                  
+                  return (
+                    <div key={`tr-${id}`} className="p-4 bg-gray-950 border border-gray-800 rounded-xl hover:border-gray-700 transition-colors group relative">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-blue-400 uppercase">Тренування</span>
+                        <span className="text-xs text-gray-500">{isCustom ? event.data.status : "Автоматично"}</span>
+                      </div>
+                      <h4 className="text-white font-bold mb-2">{title}</h4>
+                      <div className="flex flex-col gap-1 text-xs text-gray-400">
+                        <span className="flex items-center gap-1.5"><Clock size={12}/> {dateStr}</span>
+                        <span className="flex items-center gap-1.5"><MapPin size={12}/> {isCustom ? event.data.location : "База"}</span>
+                      </div>
+                      
+                      {/* Actions overlay */}
+                      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                        <button 
+                          onClick={() => {
+                            setSelectedDate(dateStr);
+                            setCustomTrainingType(title);
+                            setIsModalOpen(true);
+                          }}
+                          className="p-1.5 bg-gray-800 text-gray-300 hover:text-white rounded text-xs"
+                        >
+                          Редагувати
+                        </button>
+                        {isCustom && (
+                          <button 
+                            onClick={() => {
+                              setTrainings(prev => prev.filter(tr => tr.id !== event.data.id));
+                              fetch('/api/trainings', {
+                                method: 'DELETE',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: event.data.id })
+                              }).catch(() => {});
+                            }}
+                            className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded text-xs"
+                          >
+                            Видалити
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <h4 className="text-white font-bold mb-2">{t.type}</h4>
-                    <div className="flex flex-col gap-1 text-xs text-gray-400">
-                      <span className="flex items-center gap-1.5"><Clock size={12}/> {t.time}</span>
-                      <span className="flex items-center gap-1.5"><MapPin size={12}/> {t.location}</span>
-                    </div>
-                    
-                    {/* Actions overlay */}
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                      <button 
-                        onClick={() => {
-                          setSelectedDate(t.time);
-                          setCustomTrainingType(t.type);
-                          setIsModalOpen(true);
-                        }}
-                        className="p-1.5 bg-gray-800 text-gray-300 hover:text-white rounded text-xs"
-                      >
-                        Редагувати
-                      </button>
-                      <button 
-                        onClick={() => {
-                          setTrainings(prev => prev.filter(tr => tr.id !== t.id));
-                          // Silently delete from DB
-                          fetch('/api/trainings', {
-                            method: 'DELETE',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: t.id })
-                          }).catch(() => {});
-                        }}
-                        className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded text-xs"
-                      >
-                        Видалити
-                      </button>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
-
-              {matches.slice(0, 3).map(m => (
-                <div key={m.id} className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl hover:bg-orange-500/20 transition-colors">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-orange-400 uppercase">Офіційний Матч ({m.type})</span>
-                    <span className="text-xs text-orange-500/50">{m.status}</span>
-                  </div>
-                  <h4 className="text-white font-bold mb-2">{m.opponent}</h4>
-                  <div className="flex flex-col gap-1 text-xs text-gray-400">
-                    <span className="flex items-center gap-1.5"><Clock size={12}/> {m.date}</span>
-                    <span className="flex items-center gap-1.5"><MapPin size={12}/> {m.location}</span>
-                  </div>
-                </div>
-              ))}
             </div>
             
             <Link href="/matches" className="block w-full text-center py-3 mt-6 border border-gray-800 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
