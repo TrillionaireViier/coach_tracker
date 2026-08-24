@@ -19,6 +19,8 @@ export default function TrainingsPage() {
     volume: "MAV"
   });
 
+  const [isMixing, setIsMixing] = useState(false);
+
   useEffect(() => {
     fetchTrainings();
   }, []);
@@ -65,6 +67,31 @@ export default function TrainingsPage() {
     }
   };
 
+  const handleMixTrainings = async () => {
+    setIsMixing(true);
+    
+    const cycle = [
+      { type: "Фізика / Сила", time: "Вівторок, 18:00", location: "Головне поле", status: "Заплановано", rpe: 8, rir: 1, volume: "MRV" },
+      { type: "Техніка / Контроль", time: "Четвер, 18:00", location: "Тренажерка", status: "Заплановано", rpe: 6, rir: 2, volume: "MAV" },
+      { type: "Тактика / Відновлення", time: "П'ятниця, 17:00", location: "Мале поле", status: "Заплановано", rpe: 4, rir: 3, volume: "MEV" }
+    ];
+
+    try {
+      for (const training of cycle) {
+        await fetch('/api/trainings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(training)
+        });
+      }
+      fetchTrainings();
+    } catch (err) {
+      alert("Помилка генерації мікроциклу!");
+    }
+    
+    setIsMixing(false);
+  };
+
   return (
     <div className="p-8">
       <header className="mb-10 flex justify-between items-center">
@@ -73,9 +100,13 @@ export default function TrainingsPage() {
           <p className="text-gray-400">Графік тренувань, RIR/RPE та відстеження об'єму (MEV/MRV).</p>
         </div>
         <div className="flex gap-4">
-          <button className="bg-purple-600/20 text-purple-400 border border-purple-500/30 px-6 py-3 rounded-xl font-medium hover:bg-purple-600/30 transition-colors flex items-center gap-2">
-            <Shuffle size={18} />
-            Зміксувати Тренування (Alpha Progression)
+          <button 
+            onClick={handleMixTrainings}
+            disabled={isMixing}
+            className="bg-purple-600/20 text-purple-400 border border-purple-500/30 px-6 py-3 rounded-xl font-medium hover:bg-purple-600/30 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isMixing ? <Loader2 size={18} className="animate-spin" /> : <Shuffle size={18} />}
+            {isMixing ? 'Генерація...' : 'Зміксувати Тренування (Alpha Progression)'}
           </button>
           <button 
             onClick={() => setIsModalOpen(true)}
