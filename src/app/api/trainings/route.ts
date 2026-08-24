@@ -47,6 +47,14 @@ export async function POST(request: Request) {
         `;
         const newTraining = await insertQuery();
         return NextResponse.json(newTraining[0], { status: 201 });
+      } else if (dbError.message.includes('column "rpe" of relation "trainings" does not exist') || dbError.message.includes('column')) {
+        // Auto-migrate missing columns
+        await sql`ALTER TABLE trainings ADD COLUMN IF NOT EXISTS rpe INTEGER;`;
+        await sql`ALTER TABLE trainings ADD COLUMN IF NOT EXISTS rir INTEGER;`;
+        await sql`ALTER TABLE trainings ADD COLUMN IF NOT EXISTS volume VARCHAR(50);`;
+        
+        const newTraining = await insertQuery();
+        return NextResponse.json(newTraining[0], { status: 201 });
       }
       throw dbError;
     }

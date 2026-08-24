@@ -34,16 +34,21 @@ export default function EventsPage() {
           rpe: 5, rir: 2, volume: "MAV"
         })
       });
+      
+      const data = await res.json();
+      
       if (res.ok) {
         setIsModalOpen(false);
         setCustomTrainingType("");
         // Reload trainings to reflect the new override
-        fetch('/api/trainings').then(r => r.json()).then(data => {
-          if (!data.error) setTrainings(Array.isArray(data) ? data : []);
+        fetch('/api/trainings').then(r => r.json()).then(newData => {
+          if (!newData.error) setTrainings(Array.isArray(newData) ? newData : []);
         });
+      } else {
+        alert("Помилка від сервера: " + (data.error || "Невідома помилка"));
       }
-    } catch (err) {
-      alert("Помилка збереження");
+    } catch (err: any) {
+      alert("Мережева помилка: " + err.message);
     }
   };
 
