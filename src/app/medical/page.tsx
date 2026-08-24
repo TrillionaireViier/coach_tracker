@@ -11,6 +11,16 @@ export default function MedicalPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<MedicalRecord>>({});
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newRecord, setNewRecord] = useState<Partial<MedicalRecord>>({
+    name: "",
+    issue: "",
+    severity: "Готовий",
+    tdee: 3000,
+    expenditure: 0,
+    returnDate: "-"
+  });
+
   useEffect(() => {
     fetchRecords();
   }, []);
@@ -27,6 +37,25 @@ export default function MedicalPage() {
         setMedicalRecords([]);
         setIsLoading(false);
       });
+  };
+
+  const handleCreate = async () => {
+    try {
+      const res = await fetch('/api/medical', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRecord)
+      });
+      if (res.ok) {
+        setIsModalOpen(false);
+        setNewRecord({ name: "", issue: "", severity: "Готовий", tdee: 3000, expenditure: 0, returnDate: "-" });
+        fetchRecords();
+      } else {
+        alert("Помилка збереження звіту");
+      }
+    } catch (err) {
+      alert("Помилка сервера");
+    }
   };
 
   const handleEditClick = (record: MedicalRecord) => {
@@ -50,13 +79,16 @@ export default function MedicalPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-8 pb-20">
       <header className="mb-10 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Медицина & Харчування</h1>
           <p className="text-gray-400">Стан здоров'я та трекінг енерговитрат (MacroFactor).</p>
         </div>
-        <button className="bg-[#9FE870] text-gray-950 px-6 py-3 rounded-xl font-medium hover:bg-[#85c95a] transition-colors">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-[#9FE870] text-gray-950 px-6 py-3 rounded-xl font-medium hover:bg-[#85c95a] transition-colors"
+        >
           + Звіт Лікаря / Дієтолога
         </button>
       </header>
@@ -206,6 +238,80 @@ export default function MedicalPage() {
           </table>
         )}
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-white">Новий Звіт Лікаря</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white"><X size={24} /></button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Ім'я гравця</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#9FE870]"
+                  placeholder="Наприклад, Олександр Зінченко"
+                  value={newRecord.name}
+                  onChange={e => setNewRecord({...newRecord, name: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Проблема / Травма</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#9FE870]"
+                  placeholder="Розтягнення м'яза"
+                  value={newRecord.issue}
+                  onChange={e => setNewRecord({...newRecord, issue: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Ступінь важкості</label>
+                <select 
+                  className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#9FE870]"
+                  value={newRecord.severity}
+                  onChange={e => setNewRecord({...newRecord, severity: e.target.value})}
+                >
+                  <option>Готовий</option>
+                  <option>Легка</option>
+                  <option>Середня</option>
+                  <option>Важка</option>
+                </select>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-400 mb-1">TDEE (Норма)</label>
+                  <input 
+                    type="number" 
+                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#9FE870]"
+                    value={newRecord.tdee}
+                    onChange={e => setNewRecord({...newRecord, tdee: Number(e.target.value)})}
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Витрачено</label>
+                  <input 
+                    type="number" 
+                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#9FE870]"
+                    value={newRecord.expenditure}
+                    onChange={e => setNewRecord({...newRecord, expenditure: Number(e.target.value)})}
+                  />
+                </div>
+              </div>
+              
+              <button 
+                onClick={handleCreate}
+                className="w-full bg-[#9FE870] text-gray-950 px-6 py-3 rounded-xl font-bold hover:bg-[#85c95a] transition-colors mt-6"
+              >
+                Зберегти звіт
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -11,6 +11,14 @@ export default function PlayersPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<Player>>({});
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newPlayer, setNewPlayer] = useState<Partial<Player>>({
+    name: "",
+    position: "",
+    status: "Готовий",
+    rpe: 0
+  });
+
   useEffect(() => {
     fetchPlayers();
   }, []);
@@ -27,6 +35,25 @@ export default function PlayersPage() {
         setPlayers([]);
         setIsLoading(false);
       });
+  };
+
+  const handleCreate = async () => {
+    try {
+      const res = await fetch('/api/players', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPlayer)
+      });
+      if (res.ok) {
+        setIsModalOpen(false);
+        setNewPlayer({ name: "", position: "", status: "Готовий", rpe: 0 });
+        fetchPlayers();
+      } else {
+        alert("Помилка збереження гравця");
+      }
+    } catch (err) {
+      alert("Помилка сервера");
+    }
   };
 
   const handleEditClick = (player: Player) => {
@@ -50,14 +77,17 @@ export default function PlayersPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-8 pb-20">
       <header className="mb-10 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Гравці</h1>
           <p className="text-gray-400">Управління складом команди.</p>
         </div>
         <div className="flex gap-4">
-          <button className="bg-[#9FE870] text-gray-950 px-6 py-3 rounded-xl font-medium hover:bg-[#85c95a] transition-colors">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-[#9FE870] text-gray-950 px-6 py-3 rounded-xl font-medium hover:bg-[#85c95a] transition-colors"
+          >
             + Додати Гравця
           </button>
         </div>
@@ -162,6 +192,59 @@ export default function PlayersPage() {
           </table>
         )}
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-white">Новий Гравець</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white"><X size={24} /></button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Ім'я гравця</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#9FE870]"
+                  placeholder="Наприклад, Андрій Шевченко"
+                  value={newPlayer.name}
+                  onChange={e => setNewPlayer({...newPlayer, name: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Позиція</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#9FE870]"
+                  placeholder="Нападник"
+                  value={newPlayer.position}
+                  onChange={e => setNewPlayer({...newPlayer, position: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Статус</label>
+                <select 
+                  className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#9FE870]"
+                  value={newPlayer.status}
+                  onChange={e => setNewPlayer({...newPlayer, status: e.target.value})}
+                >
+                  <option>Готовий</option>
+                  <option>Травма</option>
+                  <option>Відпочинок</option>
+                </select>
+              </div>
+              
+              <button 
+                onClick={handleCreate}
+                className="w-full bg-[#9FE870] text-gray-950 px-6 py-3 rounded-xl font-bold hover:bg-[#85c95a] transition-colors mt-6"
+              >
+                Додати гравця
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
