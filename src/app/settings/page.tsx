@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Save, Settings as SettingsIcon, BrainCircuit, Activity } from "lucide-react";
 
 export default function SettingsPage() {
+  const [multiplier, setMultiplier] = useState(1.5);
+
   return (
     <div className="p-8">
       <header className="mb-10 flex justify-between items-center">
@@ -63,11 +66,14 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-gray-400 mb-2">Коефіцієнт Тренувального Навантаження</label>
               <input 
                 type="range" 
-                min="1" max="2" step="0.1" defaultValue="1.5"
+                min="1" max="2" step="0.1" 
+                value={multiplier}
+                onChange={(e) => setMultiplier(parseFloat(e.target.value))}
                 className="w-full accent-[#9FE870]"
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
                 <span>Легкий (1.2)</span>
+                <span className="font-bold text-[#9FE870] text-sm bg-[#9FE870]/10 px-2 py-1 rounded">Поточний: {multiplier}</span>
                 <span>Високий (1.8)</span>
               </div>
             </div>

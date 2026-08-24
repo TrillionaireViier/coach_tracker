@@ -6,6 +6,20 @@ export async function GET() {
     const records = await sql`SELECT * FROM medical_records ORDER BY id ASC`;
     return NextResponse.json(records);
   } catch (error: any) {
+    if (error.message.includes('relation "medical_records" does not exist')) {
+      await sql`
+        CREATE TABLE medical_records (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          issue VARCHAR(255),
+          "returnDate" VARCHAR(100),
+          severity VARCHAR(50),
+          tdee INTEGER,
+          expenditure INTEGER
+        )
+      `;
+      return NextResponse.json([]);
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

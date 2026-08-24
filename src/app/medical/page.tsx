@@ -19,7 +19,12 @@ export default function MedicalPage() {
     fetch('/api/medical')
       .then(res => res.json())
       .then(data => {
-        setMedicalRecords(data);
+        setMedicalRecords(Array.isArray(data) ? data : []);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setMedicalRecords([]);
         setIsLoading(false);
       });
   };
