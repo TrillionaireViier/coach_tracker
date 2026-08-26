@@ -24,6 +24,7 @@ export default function DocsPage() {
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [uploadTargetFolderId, setUploadTargetFolderId] = useState<number | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -173,11 +174,8 @@ export default function DocsPage() {
     if (doc.type === 'folder') {
       toggleFolder(doc.id);
     } else if (doc.type === 'img' && doc.contentUrl) {
-      // Show preview for images in a new tab
-      const newWindow = window.open();
-      if (newWindow) {
-        newWindow.document.write(`<img src="${doc.contentUrl}" style="max-width: 100%; height: auto;" />`);
-      }
+      // Show preview for images in a modal instead of window.open to prevent popup blocking
+      setPreviewImage(doc.contentUrl);
     } else if (doc.contentUrl) {
        // Download automatically if not image
        handleDownload({ stopPropagation: () => {} } as any, doc);
@@ -336,6 +334,28 @@ export default function DocsPage() {
             >
               Створити
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-4xl w-full h-full flex items-center justify-center">
+            <button 
+              onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }} 
+              className="absolute top-4 right-4 text-white hover:text-gray-300 bg-black/50 rounded-full p-2"
+            >
+              <X size={24} />
+            </button>
+            <img 
+              src={previewImage} 
+              alt="Preview" 
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" 
+            />
           </div>
         </div>
       )}
