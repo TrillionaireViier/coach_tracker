@@ -3,67 +3,61 @@ import { sql } from '@/lib/db';
 
 export async function GET() {
   try {
-    const players = await sql`SELECT * FROM players ORDER BY id ASC`;
+    const players = await sql`SELECT * FROM players ORDER BY id DESC`;
     return NextResponse.json(players);
   } catch (error: any) {
-    if (error.message.includes('relation "players" does not exist')) {
-      await sql`
-        CREATE TABLE players (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(255) NOT NULL,
-          position VARCHAR(100),
-          status VARCHAR(50),
-          rpe INTEGER
-        )
-      `;
-      return NextResponse.json([]);
-    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const name = body.name || "Новий Гравець";
-    const position = body.position || "Невідомо";
-    const status = body.status || "Готовий";
-    const rpe = body.rpe || 0;
+    const body = await req.json();
+    const { name, nickname, password, position, accessRole, number, age, height, weight } = body;
     
     const newPlayer = await sql`
-      INSERT INTO players (name, position, status, rpe)
-      VALUES (${name}, ${position}, ${status}, ${rpe})
+      INSERT INTO players (name, nickname, password, position, access_role, number, age, height, weight)
+      VALUES (${name}, ${nickname}, ${password}, ${position}, ${accessRole || 'Гравець'}, ${number || null}, ${age || null}, ${height || null}, ${weight || null})
       RETURNING *
     `;
-    return NextResponse.json(newPlayer[0], { status: 201 });
+    
+    return NextResponse.json(newPlayer[0]);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(req: Request) {
   try {
-    const body = await request.json();
-    const { id, name, position, status, rpe } = body;
+    const body = await req.json();
+    const { id, name, nickname, password, position, accessRole, number, age, height, weight } = body;
     
-    if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
-
-    const updatedPlayer = await sql`
-      UPDATE players 
-      SET name = COALESCE(${name}, name),
-          position = COALESCE(${position}, position),
-          status = COALESCE(${status}, status),
-          rpe = COALESCE(${rpe}, rpe)
+    if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+    
+    const updated = await sql`
+      UPDATE players
+      SET name = ${name}, nickname = ${nickname}, password = ${password}, position = ${position}, access_role = ${accessRole}, number = ${number}, age = ${age}, height = ${height}, weight = ${weight}
       WHERE id = ${id}
       RETURNING *
     `;
     
-    if (updatedPlayer.length === 0) {
-      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
-    }
-    
-    return NextResponse.json(updatedPlayer[0]);
+    return NextResponse.json(updated[0]);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    
+    if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+    
+    await sql`DELETE FROM players WHERE id = ${id}`;
+    
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

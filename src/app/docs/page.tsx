@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { FolderPlus, FilePlus, FileText, Image as ImageIcon, Search, Folder, FolderOpen, X, ChevronRight, ChevronDown, Download } from "lucide-react";
+import { FolderPlus, FilePlus, FileText, Image as ImageIcon, Search, Folder, FolderOpen, X, ChevronRight, ChevronDown, Download, Trash2 } from "lucide-react";
 import { showToast } from "@/components/Toast";
 
 import React from "react";
@@ -170,6 +170,26 @@ export default function DocsPage() {
     }
   };
 
+  const handleDelete = (e: React.MouseEvent, id: number, parentId: number | null = null) => {
+    e.stopPropagation();
+    if (confirm("Ви впевнені, що хочете видалити цей файл/папку?")) {
+      let updatedDocs;
+      if (parentId) {
+        updatedDocs = documents.map(doc => {
+          if (doc.id === parentId) {
+            return { ...doc, children: doc.children.filter((child: any) => child.id !== id) };
+          }
+          return doc;
+        });
+      } else {
+        updatedDocs = documents.filter(doc => doc.id !== id);
+      }
+      setDocuments(updatedDocs);
+      localStorage.setItem("oso_docs", JSON.stringify(updatedDocs));
+      showToast("Видалено успішно!");
+    }
+  };
+
   const handleRowClick = (doc: any) => {
     if (doc.type === 'folder') {
       toggleFolder(doc.id);
@@ -182,7 +202,7 @@ export default function DocsPage() {
     }
   };
 
-  const renderFileRow = (doc: any, isChild = false) => {
+  const renderFileRow = (doc: any, isChild = false, parentId: number | null = null) => {
     const isFolder = doc.type === 'folder';
     const isOpen = openFolders.includes(doc.id);
     
@@ -213,28 +233,37 @@ export default function DocsPage() {
         <td className="py-4 text-sm text-gray-500 font-medium">{doc.size}</td>
         <td className="py-4 text-sm text-gray-500 font-medium flex items-center justify-between pr-4">
           <span>{doc.date}</span>
-          {!isFolder && (
+          <div className="flex gap-1">
+            {!isFolder && (
+              <button 
+                onClick={(e) => handleDownload(e, doc)}
+                className="text-gray-400 hover:text-oso-primary opacity-0 group-hover:opacity-100 transition-all bg-white p-1.5 rounded-lg shadow-sm border border-gray-100 hover:border-oso-primary/30"
+                title="Скачати"
+              >
+                <Download size={16} />
+              </button>
+            )}
+            {isFolder && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setUploadTargetFolderId(doc.id);
+                  fileInputRef.current?.click();
+                }}
+                className="text-gray-400 hover:text-oso-primary opacity-0 group-hover:opacity-100 transition-all bg-white p-1.5 rounded-lg shadow-sm border border-gray-100 hover:border-oso-primary/30"
+                title="Додати файл у папку"
+              >
+                <FilePlus size={16} />
+              </button>
+            )}
             <button 
-              onClick={(e) => handleDownload(e, doc)}
-              className="text-gray-400 hover:text-oso-primary opacity-0 group-hover:opacity-100 transition-all bg-white p-1.5 rounded-lg shadow-sm border border-gray-100 hover:border-oso-primary/30"
-              title="Скачати"
+              onClick={(e) => handleDelete(e, doc.id, parentId)}
+              className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all bg-white p-1.5 rounded-lg shadow-sm border border-gray-100 hover:border-red-500/30"
+              title="Видалити"
             >
-              <Download size={16} />
+              <Trash2 size={16} />
             </button>
-          )}
-          {isFolder && (
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                setUploadTargetFolderId(doc.id);
-                fileInputRef.current?.click();
-              }}
-              className="text-gray-400 hover:text-oso-primary opacity-0 group-hover:opacity-100 transition-all bg-white p-1.5 rounded-lg shadow-sm border border-gray-100 hover:border-oso-primary/30"
-              title="Додати файл у папку"
-            >
-              <FilePlus size={16} />
-            </button>
-          )}
+          </div>
         </td>
       </tr>
     );
@@ -298,9 +327,9 @@ export default function DocsPage() {
             <tbody className="divide-y divide-gray-50">
               {documents.map((doc) => (
                 <React.Fragment key={doc.id}>
-                  {renderFileRow(doc, false)}
+                  {renderFileRow(doc, false, null)}
                   {doc.type === 'folder' && openFolders.includes(doc.id) && doc.children?.map((child: any) => (
-                    renderFileRow(child, true)
+                    renderFileRow(child, true, doc.id)
                   ))}
                 </React.Fragment>
               ))}

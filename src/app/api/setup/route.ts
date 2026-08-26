@@ -8,9 +8,30 @@ export async function GET() {
       CREATE TABLE IF NOT EXISTS players (
         id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,
+        nickname TEXT,
+        password TEXT,
         position TEXT NOT NULL,
-        status TEXT NOT NULL,
-        rpe INTEGER NOT NULL
+        access_role TEXT DEFAULT 'Гравець',
+        number INTEGER,
+        age INTEGER,
+        height INTEGER,
+        weight INTEGER,
+        matches INTEGER DEFAULT 0,
+        rating FLOAT DEFAULT 5.0,
+        status TEXT DEFAULT 'Готовий',
+        rpe INTEGER DEFAULT 5
+      );
+    `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS documents (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        size TEXT,
+        date TEXT,
+        type TEXT NOT NULL,
+        content_url TEXT,
+        parent_id INTEGER
       );
     `;
 
@@ -43,12 +64,23 @@ export async function GET() {
     const { count: playerCount } = (await sql`SELECT COUNT(*) FROM players`)[0];
     if (Number(playerCount) === 0) {
       await sql`
-        INSERT INTO players (name, position, status, rpe) VALUES 
-        ('Олександр Зінченко', 'Захисник', 'Готовий', 8),
-        ('Михайло Мудрик', 'Півзахисник', 'Готовий', 9),
-        ('Віктор Циганков', 'Півзахисник', 'Травма', 0),
-        ('Артем Довбик', 'Нападник', 'Готовий', 7),
-        ('Ілля Забарний', 'Захисник', 'Відпочинок', 5);
+        INSERT INTO players (name, nickname, password, position, access_role, number, age, height, weight, matches, rating, status, rpe) VALUES 
+        ('Олександр Зінченко', 'zinchenko17', 'password123', 'ПЗ', 'Гравець', 17, 19, 175, 64, 34, 8.4, 'Готовий', 8),
+        ('Михайло Мудрик', 'mudryk10', 'password123', 'НП', 'Гравець', 10, 19, 175, 61, 28, 7.9, 'Готовий', 9),
+        ('Ілля Забарний', 'zabarnyi13', 'password123', 'ЗХ', 'Гравець', 13, 17, 189, 81, 42, 8.1, 'Відпочинок', 5),
+        ('Артем Довбик', 'dovbyk9', 'password123', 'НП', 'Гравець', 9, 26, 189, 76, 38, 8.7, 'Готовий', 7),
+        ('Андрій Ярмоленко', 'yarmola7', 'password123', 'ПЗ', 'Гравець', 7, 34, 189, 81, 120, 8.5, 'Травма', 0);
+      `;
+    }
+    
+    const { count: docsCount } = (await sql`SELECT COUNT(*) FROM documents`)[0];
+    if (Number(docsCount) === 0) {
+      await sql`
+        INSERT INTO documents (name, size, date, type, content_url, parent_id) VALUES 
+        ('Документи гравців', '--', 'Вчора', 'folder', NULL, NULL),
+        ('Медичні довідки 2026.pdf', '2.4 MB', 'Сьогодні', 'pdf', NULL, 1),
+        ('Тактична схема (Кутовий).png', '840 KB', 'Вчора', 'img', NULL, NULL),
+        ('Правила команди.docx', '1.2 MB', '12 Серп', 'doc', NULL, NULL);
       `;
     }
 
