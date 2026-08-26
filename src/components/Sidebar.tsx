@@ -6,26 +6,27 @@ import { Calendar, Users, HeartPulse, LayoutList, Dumbbell, Folder, LineChart, M
 import { useState, useRef, useEffect } from 'react';
 import { useTeam } from '@/contexts/TeamContext';
 
-const navItems = [
-  { name: 'Календар', href: '/calendar', icon: Calendar },
-  { name: 'Мікроцикл', href: '/microcycle', icon: LayoutList },
-  { name: 'Моя команда', href: '/team', icon: Users },
-  { name: 'Оцінка самопочуття', href: '/wellbeing', icon: HeartPulse },
-  { name: 'База вправ', href: '/exercises', icon: Dumbbell },
-  { name: 'Документи', href: '/docs', icon: Folder },
-  { name: 'Аналіз', href: '/analysis', icon: LineChart },
-  { name: 'Загальний чат', href: '/chat', icon: MessageCircle },
-];
-
 export function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const { activeTeam, setActiveTeam, teams, addTeam } = useTeam();
-  
+
   const [isTeamDropdownOpen, setIsTeamDropdownOpen] = useState(false);
   const [isAddingTeam, setIsAddingTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Dynamic navItems based on activeTeam
+  const navItems = [
+    { name: 'Календар', href: '/calendar', icon: Calendar },
+    { name: 'Мікроцикл', href: `/microcycle/${encodeURIComponent(activeTeam)}`, icon: LayoutList },
+    { name: 'Моя команда', href: '/team', icon: Users },
+    { name: 'Оцінка самопочуття', href: '/wellbeing', icon: HeartPulse },
+    { name: 'База вправ', href: '/exercises', icon: Dumbbell },
+    { name: 'Документи', href: '/docs', icon: Folder },
+    { name: 'Аналіз', href: '/analysis', icon: LineChart },
+    { name: 'Загальний чат', href: '/chat', icon: MessageCircle },
+  ];
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -52,6 +53,14 @@ export function Sidebar() {
     window.location.href = '/login';
   };
 
+  const handleTeamChange = (team: string) => {
+    setActiveTeam(team);
+    setIsTeamDropdownOpen(false);
+    if (pathname.startsWith('/microcycle')) {
+      router.push(`/microcycle/${encodeURIComponent(team)}`);
+    }
+  };
+
   return (
     <div className="w-64 bg-oso-dark border-r border-gray-800 h-screen flex flex-col hidden md:flex z-40">
       <div className="p-6 pb-4">
@@ -76,10 +85,7 @@ export function Sidebar() {
                 {teams.map((team, idx) => (
                   <button
                     key={team}
-                    onClick={() => {
-                      setActiveTeam(team);
-                      setIsTeamDropdownOpen(false);
-                    }}
+                    onClick={() => handleTeamChange(team)}
                     className={`w-full block text-left px-4 py-3 text-sm font-bold hover:bg-gray-800 transition-colors ${
                       activeTeam === team ? 'text-oso-primary bg-gray-800/50' : 'text-gray-300'
                     } ${idx !== teams.length - 1 ? 'border-b border-gray-800/50' : ''}`}
@@ -122,7 +128,7 @@ export function Sidebar() {
       
       <nav className="flex-1 px-4 mt-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname.startsWith('/microcycle') && item.href.startsWith('/microcycle') ? true : pathname === item.href;
           return (
             <Link 
               key={item.name} 

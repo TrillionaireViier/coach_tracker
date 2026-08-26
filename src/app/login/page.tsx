@@ -19,7 +19,7 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
-    
+
     // Simulate API call
     setTimeout(() => {
       // For now, any login works and we just redirect to the app
@@ -36,7 +36,7 @@ export default function LoginPage() {
           <div className="absolute top-0 left-0 w-full h-1 bg-oso-primary"></div>
           <div className="absolute -right-10 -top-10 w-32 h-32 bg-oso-primary/10 rounded-full blur-2xl"></div>
           <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-oso-primary/10 rounded-full blur-2xl"></div>
-          
+
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-oso-primary/10 mb-4 relative z-10">
             <Shield size={32} className="text-oso-primary" />
           </div>
@@ -48,19 +48,19 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Нікнейм</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Введіть ваш нікнейм"
                 value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-oso-grafete font-medium focus:outline-none focus:border-oso-primary focus:bg-white transition-all shadow-sm"
+              onChange={(e) => setNickname(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-oso-grafete font-medium focus:outline-none focus:border-oso-primary focus:bg-white transition-all shadow-sm"
               />
             </div>
-            
+
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Пароль</label>
-              <input 
-                type="password" 
+              <input
+                type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -69,7 +69,7 @@ export default function LoginPage() {
             </div>
 
             <div className="pt-2">
-              <button 
+              <button
                 type="submit"
                 disabled={isLoading}
                 className="w-full bg-oso-primary text-oso-dark py-3.5 rounded-xl font-bold hover:bg-[#12d62e] transition-colors shadow-md flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed"

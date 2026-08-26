@@ -1,25 +1,37 @@
 "use client";
 
+import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Plus, GripVertical, Trash2, Edit2, X, Save } from "lucide-react";
 import { useTeam } from "@/contexts/TeamContext";
 
 export default function MicrocyclePage() {
-  const { activeTeam } = useTeam();
+  const params = useParams();
+  const router = useRouter();
+  const decodedTeam = params.team ? decodeURIComponent(params.team as string) : "U-19";
+  
+  const { activeTeam, setActiveTeam } = useTeam();
   const days = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"];
 
   const [cycleData, setCycleData] = useState<any>({ 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] });
   const [isLoaded, setIsLoaded] = useState(false);
   
+  // Sync URL parameter with global active team
+  useEffect(() => {
+    if (decodedTeam && decodedTeam !== activeTeam) {
+      setActiveTeam(decodedTeam);
+    }
+  }, [decodedTeam, activeTeam, setActiveTeam]);
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingData, setEditingData] = useState<{ id: number | null, dayIdx: number | null, title: string, type: string, time: string }>({
-    id: null, dayIdx: null, title: "", type: "training", time: "10:00 - 11:30"
+  const [editingData, setEditingData] = useState<{ id: number | null, dayIdx: number | null, title: string, type: string, startTime: string, endTime: string }>({
+    id: null, dayIdx: null, title: "", type: "training", startTime: "10:00", endTime: "11:30"
   });
 
   const fetchEvents = async () => {
     try {
-      const res = await fetch(`/api/microcycle?team=${encodeURIComponent(activeTeam)}`);
+      const res = await fetch(`/api/microcycle?team=${encodeURIComponent(decodedTeam)}`);
       const data = await res.json();
       
       const formattedData: any = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
@@ -40,18 +52,25 @@ export default function MicrocyclePage() {
   useEffect(() => {
     setIsLoaded(false);
     fetchEvents();
-  }, [activeTeam]);
+  }, [decodedTeam]);
 
   const handleAddItem = (dayIndex: number) => {
     setEditingData({
-      id: null, dayIdx: dayIndex, title: "", type: "training", time: "10:00 - 11:30"
+      id: null, dayIdx: dayIndex, title: "", type: "training", startTime: "10:00", endTime: "11:30"
     });
     setIsModalOpen(true);
   };
 
   const handleEditItem = (dayIndex: number, item: any) => {
+    let st = "10:00";
+    let et = "11:30";
+    if (item.time && item.time.includes("-")) {
+      const parts = item.time.split("-");
+      st = parts[0]?.trim() || "10:00";
+      et = parts[1]?.trim() || "11:30";
+    }
     setEditingData({
-      id: item.id, dayIdx: dayIndex, title: item.title, type: item.type, time: item.time || "10:00 - 11:30"
+      id: item.id, dayIdx: dayIndex, title: item.title, type: item.type, startTime: st, endTime: et
     });
     setIsModalOpen(true);
   };
@@ -60,6 +79,7 @@ export default function MicrocyclePage() {
     if (!editingData.title.trim() || editingData.dayIdx === null) return;
     
     const isGame = editingData.type === 'game';
+    const timeString = `${editingData.startTime} - ${editingData.endTime}`;
     
     if (editingData.id) {
       // Update
@@ -70,7 +90,7 @@ export default function MicrocyclePage() {
           id: editingData.id,
           title: editingData.title,
           type: editingData.type,
-          time: editingData.time,
+          time: timeString,
           highlight: isGame
         })
       });
@@ -80,11 +100,11 @@ export default function MicrocyclePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          team: activeTeam,
+          team: decodedTeam,
           day_index: editingData.dayIdx,
           title: editingData.title,
           type: editingData.type,
-          time: editingData.time,
+          time: timeString,
           highlight: isGame
         })
       });
@@ -234,15 +254,25 @@ export default function MicrocyclePage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Час</label>
-                <input 
-                  type="text" 
-                  placeholder="10:00 - 11:30"
-                  value={editingData.time}
-                  onChange={(e) => setEditingData({...editingData, time: e.target.value})}
-                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-oso-primary transition-colors font-medium shadow-sm"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Початок</label>
+                  <input 
+                    type="time" 
+                    value={editingData.startTime}
+                    onChange={(e) => setEditingData({...editingData, startTime: e.target.value})}
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-oso-primary transition-colors font-medium shadow-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Кінець</label>
+                  <input 
+                    type="time" 
+                    value={editingData.endTime}
+                    onChange={(e) => setEditingData({...editingData, endTime: e.target.value})}
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-oso-primary transition-colors font-medium shadow-sm"
+                  />
+                </div>
               </div>
             </div>
 
