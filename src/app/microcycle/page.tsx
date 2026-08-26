@@ -201,17 +201,37 @@ export default function MicrocyclePage() {
 
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Тип події</label>
-                <select 
-                  value={editingData.type}
-                  onChange={(e) => setEditingData({...editingData, type: e.target.value})}
-                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-oso-primary transition-colors font-medium shadow-sm cursor-pointer"
-                >
-                  <option value="training">Тренування</option>
-                  <option value="game">Матч / Гра</option>
-                  <option value="medical">Медицина / Відновлення</option>
-                  <option value="theory">Теорія</option>
-                  <option value="event">Інше (Сніданок, Вихідний)</option>
-                </select>
+                <div className="flex gap-2">
+                  <select 
+                    value={['training', 'game', 'medical', 'theory', 'event'].includes(editingData.type) ? editingData.type : 'custom'}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        setEditingData({...editingData, type: ''})
+                      } else {
+                        setEditingData({...editingData, type: e.target.value})
+                      }
+                    }}
+                    className={`${!['training', 'game', 'medical', 'theory', 'event'].includes(editingData.type) ? 'w-1/2' : 'w-full'} bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-oso-primary transition-colors font-medium shadow-sm cursor-pointer`}
+                  >
+                    <option value="training">Тренування</option>
+                    <option value="game">Матч / Гра</option>
+                    <option value="medical">Медицина / Відновлення</option>
+                    <option value="theory">Теорія</option>
+                    <option value="event">Інше (Сніданок, Вихідний)</option>
+                    <option value="custom">Свій варіант...</option>
+                  </select>
+                  
+                  {!['training', 'game', 'medical', 'theory', 'event'].includes(editingData.type) && (
+                    <input
+                      type="text"
+                      placeholder="Введіть тип..."
+                      value={editingData.type}
+                      onChange={(e) => setEditingData({...editingData, type: e.target.value})}
+                      className="w-1/2 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-oso-primary transition-colors font-medium shadow-sm"
+                      autoFocus
+                    />
+                  )}
+                </div>
               </div>
 
               <div>
