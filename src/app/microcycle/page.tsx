@@ -8,88 +8,97 @@ export default function MicrocyclePage() {
   const { activeTeam } = useTeam();
   const days = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"];
 
-  const defaultCycleData = {
-    0: [{ title: "Сніданок", type: "event" }, { title: "Тренування (Фізика)", type: "training" }],
-    1: [{ title: "Відновлення", type: "medical" }],
-    2: [{ title: "Сніданок", type: "event" }, { title: "Тренування (Тактика)", type: "training" }, { title: "Теорія", type: "theory" }],
-    3: [],
-    4: [{ title: "Тренування (Передматчеве)", type: "training" }],
-    5: [{ title: "Гра: Оболонь", type: "game", highlight: true }],
-    6: [{ title: "Вихідний", type: "event" }],
-  };
-
-  const [cycleData, setCycleData] = useState<any>(defaultCycleData);
+  const [cycleData, setCycleData] = useState<any>({ 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] });
   const [isLoaded, setIsLoaded] = useState(false);
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingData, setEditingData] = useState<{ dayIdx: number | null, itemIdx: number | null, title: string, type: string, time: string }>({
-    dayIdx: null, itemIdx: null, title: "", type: "training", time: "10:00 - 11:30"
+  const [editingData, setEditingData] = useState<{ id: number | null, dayIdx: number | null, title: string, type: string, time: string }>({
+    id: null, dayIdx: null, title: "", type: "training", time: "10:00 - 11:30"
   });
 
-  useEffect(() => {
-    const saved = localStorage.getItem(`oso_microcycle_${activeTeam}`);
-    if (saved) {
-      try {
-        setCycleData(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse saved microcycle data");
+  const fetchEvents = async () => {
+    try {
+      const res = await fetch(`/api/microcycle?team=${encodeURIComponent(activeTeam)}`);
+      const data = await res.json();
+      
+      const formattedData: any = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+      if (Array.isArray(data)) {
+        data.forEach((event: any) => {
+          if (formattedData[event.day_index]) {
+            formattedData[event.day_index].push(event);
+          }
+        });
       }
-    } else {
-      setCycleData(defaultCycleData);
+      setCycleData(formattedData);
+      setIsLoaded(true);
+    } catch (err) {
+      console.error("Failed to fetch microcycle", err);
     }
-    setIsLoaded(true);
-  }, [activeTeam]);
+  };
 
   useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem(`oso_microcycle_${activeTeam}`, JSON.stringify(cycleData));
-    }
-  }, [cycleData, isLoaded, activeTeam]);
+    setIsLoaded(false);
+    fetchEvents();
+  }, [activeTeam]);
 
   const handleAddItem = (dayIndex: number) => {
     setEditingData({
-      dayIdx: dayIndex, itemIdx: null, title: "", type: "training", time: "10:00 - 11:30"
+      id: null, dayIdx: dayIndex, title: "", type: "training", time: "10:00 - 11:30"
     });
     setIsModalOpen(true);
   };
 
-  const handleEditItem = (dayIndex: number, itemIndex: number, item: any) => {
+  const handleEditItem = (dayIndex: number, item: any) => {
     setEditingData({
-      dayIdx: dayIndex, itemIdx: itemIndex, title: item.title, type: item.type, time: item.time || "10:00 - 11:30"
+      id: item.id, dayIdx: dayIndex, title: item.title, type: item.type, time: item.time || "10:00 - 11:30"
     });
     setIsModalOpen(true);
   };
 
-  const handleSaveItem = () => {
+  const handleSaveItem = async () => {
     if (!editingData.title.trim() || editingData.dayIdx === null) return;
     
-    const updated = { ...cycleData };
-    if (!updated[editingData.dayIdx]) updated[editingData.dayIdx] = [];
+    const isGame = editingData.type === 'game';
     
-    const newItem = {
-      title: editingData.title,
-      type: editingData.type,
-      time: editingData.time,
-      highlight: editingData.type === 'game'
-    };
-
-    if (editingData.itemIdx !== null) {
-      // Edit
-      updated[editingData.dayIdx][editingData.itemIdx] = newItem;
+    if (editingData.id) {
+      // Update
+      await fetch('/api/microcycle', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingData.id,
+          title: editingData.title,
+          type: editingData.type,
+          time: editingData.time,
+          highlight: isGame
+        })
+      });
     } else {
       // Add
-      updated[editingData.dayIdx].push(newItem);
+      await fetch('/api/microcycle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          team: activeTeam,
+          day_index: editingData.dayIdx,
+          title: editingData.title,
+          type: editingData.type,
+          time: editingData.time,
+          highlight: isGame
+        })
+      });
     }
     
-    setCycleData(updated);
+    await fetchEvents();
     setIsModalOpen(false);
   };
 
-  const handleDeleteItem = (dayIndex: number, itemIndex: number) => {
-    const updated = { ...cycleData };
-    updated[dayIndex] = updated[dayIndex].filter((_: any, idx: number) => idx !== itemIndex);
-    setCycleData(updated);
+  const handleDeleteItem = async (id: number) => {
+    if (confirm('Видалити цю подію?')) {
+      await fetch(`/api/microcycle?id=${id}`, { method: 'DELETE' });
+      await fetchEvents();
+    }
   };
 
   return (
@@ -102,65 +111,69 @@ export default function MicrocyclePage() {
       </div>
 
       <div className="flex-1 overflow-x-auto pb-4">
-        <div className="grid grid-cols-1 xl:grid-cols-7 gap-2 lg:gap-4 h-full min-w-max xl:min-w-0">
-          {days.map((day, index) => (
-            <div key={day} className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden xl:w-auto w-72">
-              <div className="bg-gray-50 p-4 border-b border-gray-100 flex justify-between items-center">
-                <h3 className="font-bold text-oso-grafete">{day}</h3>
-                <span className="text-xs font-medium text-gray-400 bg-white px-2 py-1 rounded-md border border-gray-100">
-                  {((cycleData as any)[index] || []).length} подій
-                </span>
-              </div>
-              
-              <div className="p-3 flex-1 flex flex-col gap-3">
-                {((cycleData as any)[index] || []).map((item: any, itemIdx: number) => (
-                  <div 
-                    key={itemIdx} 
-                    className={`p-3 rounded-xl border flex flex-col group ${
-                      item.highlight 
-                        ? 'bg-oso-gold/10 border-oso-gold/30' 
-                        : item.type === 'training'
-                          ? 'bg-[#16FC36]/10 border-[#16FC36]/30'
-                          : 'bg-white border-gray-100 shadow-sm'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{item.type}</span>
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleEditItem(index, itemIdx, item); }}
-                          className="text-gray-400 hover:text-blue-500 transition-colors p-1"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleDeleteItem(index, itemIdx); }}
-                          className="text-gray-400 hover:text-red-500 transition-colors p-1"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                        <GripVertical size={14} className="text-gray-300 cursor-grab" />
+        {!isLoaded ? (
+          <div className="flex items-center justify-center h-full">Завантаження...</div>
+        ) : (
+          <div className="grid grid-cols-1 xl:grid-cols-7 gap-2 lg:gap-4 h-full min-w-max xl:min-w-0">
+            {days.map((day, index) => (
+              <div key={day} className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden xl:w-auto w-72">
+                <div className="bg-gray-50 p-4 border-b border-gray-100 flex justify-between items-center">
+                  <h3 className="font-bold text-oso-grafete">{day}</h3>
+                  <span className="text-xs font-medium text-gray-400 bg-white px-2 py-1 rounded-md border border-gray-100">
+                    {((cycleData as any)[index] || []).length} подій
+                  </span>
+                </div>
+                
+                <div className="p-3 flex-1 flex flex-col gap-3">
+                  {((cycleData as any)[index] || []).map((item: any) => (
+                    <div 
+                      key={item.id} 
+                      className={`p-3 rounded-xl border flex flex-col group ${
+                        item.highlight 
+                          ? 'bg-oso-gold/10 border-oso-gold/30' 
+                          : item.type === 'training'
+                            ? 'bg-[#16FC36]/10 border-[#16FC36]/30'
+                            : 'bg-white border-gray-100 shadow-sm'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{item.type}</span>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleEditItem(index, item); }}
+                            className="text-gray-400 hover:text-blue-500 transition-colors p-1"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }}
+                            className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                          <GripVertical size={14} className="text-gray-300 cursor-grab" />
+                        </div>
+                      </div>
+                      <div>
+                        <div className={`font-bold text-sm ${item.highlight ? 'text-yellow-800' : 'text-oso-grafete'}`}>
+                          {item.title}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 font-medium">{item.time || "10:00 - 11:30"}</div>
                       </div>
                     </div>
-                    <div>
-                      <div className={`font-bold text-sm ${item.highlight ? 'text-yellow-800' : 'text-oso-grafete'}`}>
-                        {item.title}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1 font-medium">{item.time || "10:00 - 11:30"}</div>
-                    </div>
-                  </div>
-                ))}
+                  ))}
 
-                <button 
-                  onClick={() => handleAddItem(index)}
-                  className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 font-bold text-sm hover:border-oso-primary hover:text-oso-primary transition-colors flex items-center justify-center gap-2 mt-auto active:scale-95"
-                >
-                  <Plus size={16} /> Додати
-                </button>
+                  <button 
+                    onClick={() => handleAddItem(index)}
+                    className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 font-bold text-sm hover:border-oso-primary hover:text-oso-primary transition-colors flex items-center justify-center gap-2 mt-auto active:scale-95"
+                  >
+                    <Plus size={16} /> Додати
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
     </div>
       
       {/* Modal for Event Edit/Add */}
@@ -168,7 +181,7 @@ export default function MicrocyclePage() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-              <h2 className="text-xl font-bold text-oso-grafete">{editingData.itemIdx !== null ? "Редагувати подію" : "Додати подію"}</h2>
+              <h2 className="text-xl font-bold text-oso-grafete">{editingData.id !== null ? "Редагувати подію" : "Додати подію"}</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
                 <X size={20} />
               </button>

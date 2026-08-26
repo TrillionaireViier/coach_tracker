@@ -60,6 +60,18 @@ export async function GET() {
       );
     `;
 
+    await sql`
+      CREATE TABLE IF NOT EXISTS microcycle_events (
+        id SERIAL PRIMARY KEY,
+        team TEXT NOT NULL,
+        day_index INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        type TEXT NOT NULL,
+        time TEXT NOT NULL,
+        highlight BOOLEAN DEFAULT false
+      );
+    `;
+
     // 2. Seed data if empty
     const { count: playerCount } = (await sql`SELECT COUNT(*) FROM players`)[0];
     if (Number(playerCount) === 0) {
@@ -103,6 +115,22 @@ export async function GET() {
         ('Тарас Степаненко', 'Забій коліна', 'через 3 дні', 'Легка', 3100, 2400),
         ('Віталій Миколенко', 'Мікротравма', 'Сьогодні (готовий)', 'Готовий', 3400, 3300),
         ('Артем Довбик', '-', '-', 'Готовий', 3800, 3750);
+      `;
+    }
+
+    const { count: microcycleCount } = (await sql`SELECT COUNT(*) FROM microcycle_events`)[0];
+    if (Number(microcycleCount) === 0) {
+      await sql`
+        INSERT INTO microcycle_events (team, day_index, title, type, time, highlight) VALUES 
+        ('U-19', 0, 'Сніданок', 'event', '10:00 - 11:30', false),
+        ('U-19', 0, 'Тренування (Фізика)', 'training', '10:00 - 11:30', false),
+        ('U-19', 1, 'Відновлення', 'medical', '10:00 - 11:30', false),
+        ('U-19', 2, 'Сніданок', 'event', '10:00 - 11:30', false),
+        ('U-19', 2, 'Тренування (Тактика)', 'training', '10:00 - 11:30', false),
+        ('U-19', 2, 'Теорія', 'theory', '10:00 - 11:30', false),
+        ('U-19', 4, 'Тренування (Передматчеве)', 'training', '10:00 - 11:30', false),
+        ('U-19', 5, 'Гра: Оболонь', 'game', '10:00 - 11:30', true),
+        ('U-19', 6, 'Вихідний', 'event', '10:00 - 11:30', false);
       `;
     }
 
